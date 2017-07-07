@@ -3,18 +3,17 @@
 
 BitmapManager.self = null;
 
+function BitmapManagerItem () 
+{ 
+	this.m_originalBitmap = null;
+	this.m_bitmap = null;
+	this.m_canvas = null;
+	this.m_itemIndex = -1;
+}
+
 function BitmapManager () 
 { 
 	BitmapManager.self = this;
-
-	function BitmapManagerItem () 
-	{ 
-		BitmapManagerItem.prototype.initDefault = function ()
-		{
-			this.m_originalBitmap = null;
-			this.m_bitmap = null;
-		}
-	}
 
 	BitmapManager.prototype.initDefault = function ()
 	{
@@ -141,16 +140,18 @@ function BitmapManager ()
 				newItem.m_originalBitmap.onload = function(_event)
 				{
 					itemIndex = this.alt;
+					item = BitmapManager.self.m_items[itemIndex];
 
 					msglog('BitmapManager resource loaded:' + this.src + ", itemIndex=" + itemIndex);
 
+					item.m_itemIndex = itemIndex;
 					if (BitmapManager.self.m_onFilterCallback != null)
 					{
-						BitmapManager.self.m_items[itemIndex].m_bitmap = BitmapManager.self.m_onFilterCallback(BitmapManager.self.m_document, this, itemIndex);
+						item.m_bitmap = BitmapManager.self.m_onFilterCallback(BitmapManager.self.m_document, item);
 					}
 					else
 					{
-						BitmapManager.self.m_items[itemIndex].m_bitmap = BitmapManager.self.m_items[itemIndex].m_originalBitmap; 
+						item.m_bitmap = item.m_originalBitmap; 
 					}
 
 					updateProgressBar();
@@ -232,10 +233,39 @@ function BitmapManager ()
 		else
 			return null;
 	};
-	
+
+	BitmapManager.prototype.getOriginalImage = function (_index) 
+	{
+		if (_index >= 0 && _index < this.m_items.length)
+			return this.m_items[_index].m_originalBitmap;
+		else
+			return null;
+	};
+
 	BitmapManager.prototype.getImageByName = function (_name) 
 	{
 		return this.getImage(this.getIdByName(_name));
+	};
+
+	BitmapManager.prototype.getOriginalImageByName = function (_name) 
+	{
+		return this.getOriginalImage(this.getIdByName(_name));
+	};
+
+	BitmapManager.prototype.applyFilterToImage = function (_name, _document, _callbackFilter) 
+	{
+		var result = null;
+		var imageId = -1;
+
+		imageId = this.getIdByName(_name);
+		if (imageId !== -1) 	
+		{			
+			item = this.m_items[imageId]; 
+			item.m_bitmap = _callbackFilter(_document, item);
+			result = item.m_bitmap;
+		}
+
+		return result;
 	};
 
 	this.initDefault();

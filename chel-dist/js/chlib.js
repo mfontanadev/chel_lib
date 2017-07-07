@@ -1,10 +1,17 @@
 // Docs
-// Load image and show with java script: http://www.html5canvastutorials.com/tutorials/html5-canvas-image-loader/
+// ChLib v1.2 (26/06/2017)	: Fix: Solving getBouncingREct to get canvas's offset see m_canvasOffsetX or m_canvasOffsetY. 
+//							  Fix: Avoid zooming on SAfari 10.x (initial-scale=1.0 is not working any more)
+// ChLib v1.1				: Fix: ChCanvas class now has m_scaleX, m_scaleY setted properly.
+// ChLib v1.0: first aproach. 
 
 // ***************************************
 // General helpers
 // ***************************************
 var __loggerControl;
+
+CHLIB_C_STROKE_WIDTH_LINE = 1;
+CHLIB_C_STROKE_WIDTH_CIRCLE = 2;
+CHLIB_C_STROKE_WIDTH_RECTANGLE = 1;
 
 function msglog(_text)
 {
@@ -61,7 +68,7 @@ function chMeasureText(context, _text, _font)
 function renderCircle(canvas, context, _cenX, _cenY, _radious, _fillColor)
 {
 	context.beginPath();
-	context.lineWidth = 3;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_CIRCLE;
 	context.fillStyle = _fillColor;
 	context.strokeStyle = _fillColor;
 	context.arc(_cenX, _cenY, _radious, 0, 2 * Math.PI, false);
@@ -72,7 +79,7 @@ function renderCircle(canvas, context, _cenX, _cenY, _radious, _fillColor)
 function renderCircleNotFill(canvas, context, _cenX, _cenY, _radious, _strokeColor)
 {
 	context.beginPath();
-	context.lineWidth = 3;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_CIRCLE;
 	context.strokeStyle = _strokeColor;
 	context.arc(_cenX, _cenY, _radious, 0, 2 * Math.PI, false);
 	context.stroke();
@@ -82,7 +89,7 @@ function renderCircleTransparent(canvas, context, _cenX, _cenY, _radious, _fillC
 {
 	context.save();
 	context.beginPath();
-	context.lineWidth = 3;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_CIRCLE;
 	context.globalAlpha = _alpha;
 	context.fillStyle = _fillColor;
 	context.strokeStyle = _fillColor;
@@ -97,7 +104,7 @@ function renderCircleTransparentNotStroke(canvas, context, _cenX, _cenY, _radiou
 {
 	context.save();
 	context.beginPath();
-	context.lineWidth = 3;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_CIRCLE;
 	context.globalAlpha = _alpha;
 	context.fillStyle = _fillColor;
 	context.arc(_cenX, _cenY, _radious, 0, 2 * Math.PI, false);
@@ -110,7 +117,7 @@ function rendeElipsisTransparent(canvas, context, _cenX, _cenY, _radious, _borde
 {
 	context.save();
 	context.beginPath();
-	context.lineWidth = 3;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_CIRCLE;
 	context.globalAlpha = _alpha;
 	context.strokeStyle = _borderColor;
 	context.arc(_cenX, _cenY, _radious, 0, 2 * Math.PI, false);
@@ -122,9 +129,9 @@ function rendeElipsisTransparent(canvas, context, _cenX, _cenY, _radious, _borde
 function renderRectangle(canvas, context, _x1, _y1, _w, _h)
 {
    context.beginPath();
-   context.lineWidth = 1;
+   context.lineWidth = CHLIB_C_STROKE_WIDTH_RECTANGLE;
    context.fillStyle = 'yellow';
-   context.strokeStyle = 'black';
+   context.strokeStyle = 'green';
    context.rect(_x1, _y1, _w, _h);
    context.fill();
    context.stroke();
@@ -133,7 +140,7 @@ function renderRectangle(canvas, context, _x1, _y1, _w, _h)
 function renderRectangleFilled(canvas, context, _x1, _y1, _w, _h, _color)
 {
    context.beginPath();
-   context.lineWidth = 1;
+   context.lineWidth = CHLIB_C_STROKE_WIDTH_RECTANGLE;
    context.fillStyle = _color;
    context.rect(_x1, _y1, _w, _h);
    context.fill();
@@ -142,7 +149,7 @@ function renderRectangleFilled(canvas, context, _x1, _y1, _w, _h, _color)
 function renderRectangle(canvas, context, _x1, _y1, _w, _h, _borderColor)
 {
    context.beginPath();
-   context.lineWidth = 1;
+   context.lineWidth = CHLIB_C_STROKE_WIDTH_RECTANGLE;
    context.strokeStyle = _borderColor;
    context.rect(_x1, _y1, _w, _h);
    context.stroke();
@@ -151,7 +158,7 @@ function renderRectangle(canvas, context, _x1, _y1, _w, _h, _borderColor)
 function renderCollitionRectangle(canvas, context, _rect, _borderColor)
 {
    context.beginPath();
-   context.lineWidth = 1;
+   context.lineWidth = CHLIB_C_STROKE_WIDTH_RECTANGLE;
    context.strokeStyle = _borderColor;
    context.rect(_rect.m_x1, _rect.m_y1, _rect.m_x2 - _rect.m_x1, _rect.m_y2 - _rect.m_y1);
    context.stroke();
@@ -162,7 +169,7 @@ function renderRectangleFillTransparent(canvas, context, _x1, _y1, _w, _h, _fill
 	context.save();
 	context.beginPath();
 	context.globalAlpha = _alpha;
-	context.lineWidth = 1;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_RECTANGLE;
 	context.fillStyle = _fillColor;
 	context.rect(_x1, _y1, _w, _h);
 	context.fill();
@@ -174,8 +181,8 @@ function renderLine(canvas, context, _x1, _y1, _x2, _y2, _fillColor, _alpha)
 	context.save();
 	context.beginPath();
 	context.strokeStyle = _fillColor;
-	context.lineWidth = 1;
-	context.globalAlpha = _alpha;
+	context.lineWidth = CHLIB_C_STROKE_WIDTH_LINE;
+	context.globalAlphaCHLIB_C_ = _alpha;
 
     context.moveTo(_x1,_y1);
     context.lineTo(_x2,_y2);
@@ -212,9 +219,9 @@ function writeMessageBase(_context, message, _posX, posY, _debug_mode)
 {
 	if (_debug_mode == true)
 	{
-		_context.clearRect(_posX, posY - 20, window.innerHeight - _posX, 30);
+		_context.clearRect(_posX, posY - 20, window.innerHeight, 30);
 		_context.font = '9pt Calibri';
-		_context.fillStyle = 'silver';
+		_context.fillStyle = 'red';
 		_context.fillText(message, _posX, posY);
 	}
 }
@@ -240,7 +247,7 @@ function rgbaToColor(_r, _g, _b, _a)
 	 _b = _b % 256;
 	var result = 'rgba(' + _r.toString() + "," + _g.toString() + "," + _b.toString() + "," + _a.toString()+")";
 	return result;
-};
+}
 
 function graToRad(grados)
 {
@@ -268,6 +275,14 @@ function chClearArray(_array)
 	{
 		_array.splice(0, _array.length);	
 	}
+}
+
+// Sobrecarpa para escalado
+function drawImageScaled(_canvas, _context, _bitmap, _x, _y, _width, _height) 
+{
+	_context.save();
+	_context.drawImage(_bitmap, _x, _y, _width, _height);
+	_context.restore();
 }
 
 function drawImageTransparent(_canvas, _context, _bitmap, _x, _y, _percent) 
@@ -409,6 +424,32 @@ function drawImageRotationTransparentScaled(_canvas, _context, _bitmap, _x, _y, 
     _context.rotate(graToRad(360-_rotationAngle));
 
     _context.scale( _scale, _scale);
+
+	// translate back context to center of canvas.
+    _context.translate(	-_x, -_y);
+	
+	// Make pivot as center of image.
+	_context.drawImage(_bitmap, _x - w, _y - h);
+
+	_context.restore();
+}
+
+function drawImageRotationTransparentScaledFlip(_canvas, _context, _bitmap, _x, _y, _rotationAngle, _percent, _scale, _flip) 
+{
+	_context.save();
+
+	_context.globalAlpha = _percent;
+
+	var w = _bitmap.width / 2;
+	var h = _bitmap.height / 2;
+
+	// translate context to center of canvas.	
+    _context.translate( _x, _y);
+
+    // rotate 45 degrees clockwise.
+    _context.rotate(graToRad(360-_rotationAngle));
+
+    _context.scale( _scale * _flip, _scale);
 
 	// translate back context to center of canvas.
     _context.translate(	-_x, -_y);
@@ -724,9 +765,9 @@ function chVector ()
 
 // Auxiliar class
 // Class Rectangle
-function chRect () 
+function ChRect ()
 { 
-	chRect.prototype.initWith = function (_x1, _y1, _x2, _y2)
+	ChRect.prototype.initWith = function (_x1, _y1, _x2, _y2)
 	{
 		this.m_x1 = _x1;
 		this.m_y1 = _y1;
@@ -734,7 +775,7 @@ function chRect ()
 		this.m_y2 = _y2;
 	};
 	
-	chRect.prototype.fLog = function () 
+	ChRect.prototype.fLog = function ()
 	{ 
 		var logText = "Point: " +
 		"m_x=" + this.m_x + ", " +
@@ -745,19 +786,19 @@ function chRect ()
 		return logText;
 	};
 	
-	chRect.prototype.width = function () 
+	ChRect.prototype.width = function ()
 	{
 		return Math.abs(this.m_x1 - this.m_x2);
 	};
 
-	chRect.prototype.height = function () 
+	ChRect.prototype.height = function ()
 	{
 		return Math.abs(this.m_y1 - this.m_y2);
 	};
 	
-	chRect.prototype.getCenterX = function () 
+	ChRect.prototype.getCenterX = function ()
 	{
-		var middle = Math.abs(this.m_x2 + this.m_x1) / 2;
+		var middle = Math.abs(this.m_x2 - this.m_x1) / 2;
 		
 		if (this.m_x1 <= this.m_x2)
 			return this.m_x1 + middle;
@@ -765,14 +806,19 @@ function chRect ()
 			return this.m_x2 + middle;
 	};
 
-	chRect.prototype.getCenterY = function () 
+	ChRect.prototype.getCenterY = function ()
 	{
-		var middle = Math.abs(this.m_y1 + this.m_y1) / 2;
+		var middle = Math.abs(this.m_y2 - this.m_y1) / 2;
 		
 		if (this.m_y1 <= this.m_y2)
 			return this.m_y1 + middle;
 		else
 			return this.m_y2 + middle;
+	}
+
+	ChRect.prototype.draw = function (_canvas, _context)
+	{
+		renderRectangle(_canvas, _context, this.m_x1, this.m_y1, this.width(), this.height(), "red");
 	}
 }
 
@@ -913,6 +959,16 @@ function getCenter(_totalSize, _objSize)
 	return (_totalSize - _objSize) / 2;
 }
 
+function getCenterInIntervale(_x1, _x2)
+{
+	return _x1 + ((_x2 - _x1) / 2);
+}
+
+function getInterpolatedValue(_from, _to, _steps, _currentStep)
+{
+	return _from + ((_to - _from) / _steps * _currentStep);
+}
+
 
 function getColX(_colNumber, _colCount, _colWidth, _ctrlWidth, _totalWidth)
 {
@@ -926,6 +982,20 @@ function getColX(_colNumber, _colCount, _colWidth, _ctrlWidth, _totalWidth)
 	
 	return result;
 }
+
+function updateRectangleWithScale(_image, _cx, _cy, _scale, _outputRectangle)
+{
+	var widthScaled = _image.width * 0.5 * _scale;
+	var heightScaled = _image.height * 0.5 * _scale;
+
+	_outputRectangle.m_x1 = _cx - widthScaled;
+	_outputRectangle.m_y1 = _cy - heightScaled;
+	_outputRectangle.m_x2 = _cx + widthScaled;
+	_outputRectangle.m_y2 = _cy + heightScaled;
+
+	return _outputRectangle;
+}
+
 
 function __log(e, data)
 {
@@ -943,13 +1013,17 @@ function chCanvas (_document, _window)
 	this.m_canvas = null;
 	this.m_context = null;
 
+	this.m_scaleX = 1;
+	this.m_scaleY = 1;
+
 	this.m_canvasWidth = 0;
 	this.m_canvasHeight = 0;
 	this.m_resizeMethodToMaxZoom = false;
 	this.m_invalidateOnResize = false;		// invalidate perserof resize when user call enableOnResizeChange.
 
-	this.m_scaleX = 1;
-	this.m_scaleY = 1;
+	// My own method to get canvas's offset because getBouncingRect has a bug (elacting scroll y)
+	this.m_canvasOffsetX = 0;
+	this.m_canvasOffsetY = 0;
 
 	chCanvas.prototype.setCanvasById = function (_canvasId)
 	{
@@ -1055,6 +1129,9 @@ function chCanvas (_document, _window)
 	    this.m_canvas.style.position = 'absolute';
 	    this.m_canvas.style.left = dx + 'px';
 	    this.m_canvas.style.top =  dy + 'px';
+
+		this.m_canvasOffsetX = dx;
+		this.m_canvasOffsetY = dy;
 	}
 
 	chCanvas.prototype.enableOnResizeChange = function ()
@@ -1080,12 +1157,12 @@ function chCanvas (_document, _window)
 
 	chCanvas.prototype.setResizeMethodToMaxZoom = function ()
 	{
-		this.m_maxZoom = true;
+		this.m_resizeMethodToMaxZoom = true;
 	}
 
 	chCanvas.prototype.setResizeMethodToDefault = function ()
 	{
-		this.m_maxZoom = false;
+		this.m_resizeMethodToMaxZoom = false;
 	}
 
 	chCanvas.prototype.fLog = function () 
@@ -1223,7 +1300,6 @@ function initResizingBase(_paramCanvas, _maxZoom)
 	resize();
 }
 
-
 function getCurrentHostname(_window) 
 {
 	var myHost = "localhost";
@@ -1241,6 +1317,46 @@ function getCurrentHostname(_window)
 	return myHost;
 }
 
+function getFPSByTime(_milis)
+{
+	return C_FPS_MS * _milis / 1000;
+}
+
+function getOffsetsGivenAPivot(_totalWidth, _totalHeight, _pivotX, _pivotY, _scale)
+{
+	var resX = 0;
+	var resY = 0;
+
+	resX = ((_totalWidth / 2) - _pivotX) * _scale * 1;
+	resY = ((_totalHeight / 2) - _pivotY) * _scale * 1;
+
+	return ({x: resX, y: resY});
+}
+
+// ***************************************
+// SERVER Helpers
+// ***************************************
+function callWebService(_type, _servicePath, _callbackError, _callbackSuccess)
+{
+	msglog("CallWebService request:" + _servicePath);
+
+	$.ajax({
+	   url: '//' + viewMngr.m_hostname + '/' + _servicePath,
+	   error: function() 
+	   {
+	     	msglog("CallWebService: error");
+	   		if (typeof _callbackError !== 'undefined')
+	   			_callbackError("ERROR");
+	   },
+	   success: function(data) 
+	   {
+	   		msglog("CallWebService response:" + data);
+	   		if (typeof _callbackSuccess !== 'undefined')
+	   			_callbackSuccess(data);
+	   },
+	   type: _type
+	});
+}
 
 
 

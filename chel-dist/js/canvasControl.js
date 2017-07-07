@@ -1,7 +1,12 @@
-// ControlCanvas v3.5: BUG FIX: onMouseDown loss focus if we touch outside the control.
-// ControlCanvas v3.4: NEW: now InputButton send _onkeyup envent.
-// ControlCanvas v3.3: BUG FIX: InputButton in disabled mode shows cursor and border (if we had selected it previuosly)
-// ControlCanvas v3.2: fix mouseUp bug. See commnet "Can not fire click if mouseUp did not came from previous mouseDown."
+
+// ControlCanvas v3.8: Add: tag variable to hold generic values.
+// ControlCanvas v3.7: Add: registerOnClick to allow send parent in final callback. This allows modify parent data in the callback.
+// ControlCanvas v3.6: Fix: Mouse not working when canvas is scaled
+//                     Refactor: no more canvas, it was replace for canvasEx, this solved mouse scale problems
+// ControlCanvas v3.5: Fix: onMouseDown loss focus if we touch outside the control.
+// ControlCanvas v3.4: Add: now InputButton send _onkeyup envent.
+// ControlCanvas v3.3: Fix: InputButton in disabled mode shows cursor and border (if we had selected it previuosly)
+// ControlCanvas v3.2: Fix: mouseUp bug. See commnet "Can not fire click if mouseUp did not came from previous mouseDown."
 // ControlCanvas v3.1: place holder functionality.
 // ControlCanvas v3.0: disabled buttons.
 // ControlCanvas v2.0: images buttons and no bugs.
@@ -21,51 +26,50 @@ function CanvasControl ()
   CanvasControl.C_THEME_TYPE_GREEN = 4;
   CanvasControl.C_THEME_TYPE_BORDERLESS = 5;
 
-  CanvasControl.prototype.initButtonStyle = function (_canvas, _x, _y, _width, _height, _value)
+  CanvasControl.prototype.initButtonStyle = function (_canvasEx, _x, _y, _width, _height, _value)
   {    
     var self = this;
 
     // setup the defaults
     self._controlType = self.C_CONTROL_TYPE_BUTTON;
-    self.initBaseValues(self, _canvas, _x, _y, _width, _height, _value);
+    self.initBaseValues(self, _canvasEx, _x, _y, _width, _height, _value);
     self.initEvents(self);
   };
 
-  CanvasControl.prototype.initLabelStyle = function (_canvas, _x, _y, _width, _height, _value)
+  CanvasControl.prototype.initLabelStyle = function (_canvasEx, _x, _y, _width, _height, _value)
   {    
     var self = this;
 
     // setup the defaults
     self._controlType = self.C_CONTROL_TYPE_LABEL;
-    self.initBaseValues(self, _canvas, _x, _y, _width, _height, _value);
+    self.initBaseValues(self, _canvasEx, _x, _y, _width, _height, _value);
   };
 
-  CanvasControl.prototype.initCheckBoxStyle = function (_canvas, _x, _y, _width, _height, _value)
+  CanvasControl.prototype.initCheckBoxStyle = function (_canvasEx, _x, _y, _width, _height, _value)
   {    
     var self = this;
 
     // setup the defaults
     self._controlType = self.C_CONTROL_TYPE_CHECKBOX;
-    self.initBaseValues(self, _canvas, _x, _y, _width, _height, _value);
+    self.initBaseValues(self, _canvasEx, _x, _y, _width, _height, _value);
     self.initEvents(self);
   };
   
-  CanvasControl.prototype.initInputStyle = function (_canvas, _x, _y, _width, _height, _value)
+  CanvasControl.prototype.initInputStyle = function (_canvasEx, _x, _y, _width, _height, _value)
   {    
     var self = this;
 
     // setup the defaults
     self._controlType = self.C_CONTROL_TYPE_INPUT;
-    self.initBaseValues(self, _canvas, _x, _y, _width, _height, _value);
+    self.initBaseValues(self, _canvasEx, _x, _y, _width, _height, _value);
     self.initEvents(self);
     self.initKeyboardEvents(self);
   };
 
-  CanvasControl.prototype.initBaseValues = function (self, _canvas, _x, _y, _width, _height, _value)
+  CanvasControl.prototype.initBaseValues = function (self, _canvasEx, _x, _y, _width, _height, _value)
   { 
-    self._canvas = _canvas || null;
-    self._ctx = self._canvas ? self._canvas.getContext('2d') : null;
-
+    self._canvasEx = _canvasEx || null;
+    self._ctx = self._canvasEx.m_canvas ? self._canvasEx.m_canvas.getContext('2d') : null;
     self._x = _x || 0;
     self._y = _y || 0;
     self._fontSize = 14;
@@ -76,8 +80,12 @@ function CanvasControl ()
     self._fontWeight = 'normal';
     self._fontStyle = 'normal';
     self._textJustify = 0;
+    self._scale = 1;
+    self._alpha = 1;
     self._width = _width || 50;
     self._height = _height || self._fontSize;
+    self._recWidth = self._width;
+    self._recHeight = self._height;
     self._padding = 0;
     self._borderWidth = 2;
     self._borderColor = '#CCCCCC';
@@ -96,41 +104,57 @@ function CanvasControl ()
     self._enabled = true;
 
     self._onClick = null;
+    self._onClickParent = null;
     self._lastPosPointerX = 0;
     self._lastPosPointerY = 0;
 
     self._image = null;
     self._imageLoaded = false;
+    self._imageDown = null;
+    self._imageDownLoaded = false;
+
+    self._onSubmit = null;
+    self._onkeydown = null;
+    self._onkeyup = null;
+    self._onkeyUpParent = null;
+
+    self._tag = null;
+    self._touchAvoidMouse = false;
   };
-  
+
   CanvasControl.prototype.initEvents = function (self)
   { 
-
     // setup main canvas events
-    if (self._canvas) 
+    if (self._canvasEx.m_canvas) 
     {
-      self._canvas.addEventListener('mousedown', function(e) 
+      self._canvasEx.m_canvas.addEventListener('mousedown', function(e) 
       {
-        e = e || window.event;
-        if (self._visible == true && self._enabled == true)
+        if (self._touchAvoidMouse === false)
         {
-          var pointer = self.mousePos(e, self);
-          self.mouseDown(e, self, pointer);
+          e = e || window.event;
+          if (self._visible == true && self._enabled == true)
+          {
+            var pointer = self.mousePos(e, self);
+            self.mouseDown(e, self, pointer);
+          }
         }
       }, false);
 
       
-      self._canvas.addEventListener('mouseup', function(e) 
+      self._canvasEx.m_canvas.addEventListener('mouseup', function(e) 
       {
-        e = e || window.event;
-        if (self._visible == true && self._enabled == true)
+        if (self._touchAvoidMouse === false)
         {
-          var pointer = self.mousePos(e, self);
-          self.mouseUp(e, self, pointer);
+          e = e || window.event;
+          if (self._visible == true && self._enabled == true)
+          {
+            var pointer = self.mousePos(e, self);
+            self.mouseUp(e, self, pointer);
+          }
         }
       }, false);
 
-      self._canvas.addEventListener('touchstart', function(e) 
+      self._canvasEx.m_canvas.addEventListener('touchstart', function(e) 
       {
         if ((typeof e !== 'undefined'))
         {
@@ -139,13 +163,14 @@ function CanvasControl ()
 
           if (self._visible == true && self._enabled == true)
           {
+            self._touchAvoidMouse = true;
             var pointer = self.touchPos(e, self);
             self.mouseDown(e, self, pointer);
           }
         }
       }, false);
 
-      self._canvas.addEventListener('touchend', function(e) 
+      self._canvasEx.m_canvas.addEventListener('touchend', function(e) 
       {
         if ((typeof e !== 'undefined'))
         {
@@ -242,6 +267,7 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
       return;
 
     self._ctx.save();
+    self._ctx.globalAlpha = self._alpha;
     self._ctx.strokeStyle = self._borderColor;
     
     // Set background styles
@@ -271,8 +297,17 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
     }
 
     // Render background
-    self._ctx.lineWidth = self._borderWidth;
-    self.roundedRect(self._ctx, self._x, self._y, self._width, self._height, self._borderRadius, true, true);
+    var renderBorder = true;
+    if (self._themeType === CanvasControl.C_THEME_TYPE_BORDERLESS && self._controlType === self.C_CONTROL_TYPE_BUTTON)
+    {
+      renderBorder = false
+    }
+
+    if (renderBorder === true)
+    {
+      self._ctx.lineWidth = self._borderWidth;
+      self.roundedRect(self._ctx, self._x, self._y, self._width, self._height, self._borderRadius, true, true);
+    }
 
     // Input control has a smaller white second background. 
     if (self._controlType == self.C_CONTROL_TYPE_INPUT)
@@ -280,13 +315,13 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
       if (self._hasFocus == true && self._enabled == true)
       {
         self._ctx.lineWidth = 1;
-        self._ctx.strokeStyle = "rgba(0,0,200,0.7)";
+        self._ctx.strokeStyle = this.rgbaToColor(0, 0, 200, 0.7);
         self.roundedRect(self._ctx, self._x, self._y, self._width, self._height, self._borderRadius, false, true);
-        self._ctx.strokeStyle = "rgba(0,0,200,0.5)";
+        self._ctx.strokeStyle = this.rgbaToColor(0, 0, 200, 0.5);
         self.roundedRect(self._ctx, self._x+1, self._y+1, self._width-2, self._height-2, self._borderRadius, false, true);
       }        
     }
-    
+
     // Draw inner text
     var innerText = self.getText();
     var innterTExtColor = self._fontColor;
@@ -326,7 +361,7 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
 
     if (self._controlType == self.C_CONTROL_TYPE_INPUT)
     {
-      // Disabled input control shouldn´t render cursor.
+      // Disabled input control shouldnÂ´t render cursor.
       if (self._hasFocus == true && self._enabled == true)
       {
         self._ctx.strokeStyle = "#000";
@@ -338,9 +373,19 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
     if (self._controlType == self.C_CONTROL_TYPE_BUTTON ||
       self._controlType == self.C_CONTROL_TYPE_CHECKBOX)
     {
-      if (self._imageLoaded == true)
+      if (self._isMouseDown == false)
       {
-        self.drawImageResized(self);
+        if (self._image !== null && self._imageLoaded == true)
+        {
+          self.drawImageResized(self._image, self);
+        }
+      }
+      else
+      {
+        if (self._imageDown !== null && self._imageDownLoaded == true)
+        {
+          self.drawImageResized(self._imageDown, self);
+        }
       }
     }
 
@@ -480,7 +525,6 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
     
     recFocus = self._hasFocus;
     self._hasFocus = isOver;
-    //console.log("x=" + x + ", Y=" + y + ", isOver=" + isOver + ",hasFocus=" +  recFocus);
 
     if (isOver == true)
     {
@@ -496,7 +540,9 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
       }
 
       if (self._onClick != null)
+      {
         self._onClick(e, self);
+      }
     }
     else
     {
@@ -521,6 +567,16 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
       this._hiddenInput.value = this._value;
   };
 
+  CanvasControl.prototype.getTag = function()
+  {
+      return this._tag;
+  };
+
+  CanvasControl.prototype.setTag = function(_value)
+  {
+      this._tag = _value;
+  };
+
   CanvasControl.prototype.setPlaceholderText = function(_text)
   {
       if (this._controlType === this.C_CONTROL_TYPE_INPUT)
@@ -539,6 +595,26 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
     this._isChecked = _checked;
   };
 
+  CanvasControl.prototype.getEnabled = function()
+  {
+    return this._enabled;
+  };
+
+  CanvasControl.prototype.setEnabled = function(_value)
+  {
+    this._enabled = _value;
+  };
+
+  CanvasControl.prototype.getVisible = function()
+  {
+    return this._visible;
+  };
+
+  CanvasControl.prototype.setVisible = function(_value)
+  {
+    this._visible = _value;
+  };
+  
   /**
   * Checks if a coordinate point is over the input box.
   * @param  {Number} x x-coordinate position.
@@ -568,7 +644,7 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
     var offsetX = 0;
     var offsetY = 0;
 
-    var rect = self._canvas.getBoundingClientRect();
+    var rect = self._canvasEx.m_canvas.getBoundingClientRect();
     if ((typeof e.targetTouches[0] !== 'undefined') && (typeof e.targetTouches[0] !== 'undefined'))
     {
       offsetX = e.targetTouches[0].clientX - rect.left;
@@ -583,13 +659,13 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
     {
       offsetX = self._lastPosPointerX;
       offsetY = self._lastPosPointerY;
-    }
+   }
 
-    if ((typeof m_scaleX !== 'undefined') && m_scaleX !== null && m_scaleX != 0)
-      offsetX = offsetX / m_scaleX;
+    if ((typeof self._canvasEx.m_scaleX !== 'undefined') && self._canvasEx.m_scaleX !== null && self._canvasEx.m_scaleX != 0)
+      offsetX = offsetX / self._canvasEx.m_scaleX;
 
-    if ((typeof m_scaleY !== 'undefined') && m_scaleY !== null && m_scaleY != 0)
-      offsetY = offsetY / m_scaleY;
+    if ((typeof self._canvasEx.m_scaleY !== 'undefined') && self._canvasEx.m_scaleY !== null && self._canvasEx.m_scaleY != 0)
+      offsetY = offsetY / self._canvasEx.m_scaleY;
 
     self._lastPosPointerX = offsetX; 
     self._lastPosPointerY = offsetY;
@@ -608,20 +684,22 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
   */
   CanvasControl.prototype.mousePos = function(e, self) 
   {
-    var rect = self._canvas.getBoundingClientRect();
-
+    var rect = self._canvasEx.m_canvas.getBoundingClientRect();
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
 
-    if ((typeof m_scaleX !== 'undefined') && m_scaleX !== null && m_scaleX != 0)
-      offsetX = offsetX / m_scaleX;
+    if ((typeof self._canvasEx.m_scaleX !== 'undefined') && self._canvasEx.m_scaleX !== null && self._canvasEx.m_scaleX != 0)
+    {
+      offsetX = offsetX / self._canvasEx.m_scaleX;
+    }
 
-    if ((typeof m_scaleY !== 'undefined') && m_scaleY !== null && m_scaleY != 0)
-      offsetY = offsetY / m_scaleY;
+    if ((typeof self._canvasEx.m_scaleY !== 'undefined') && self._canvasEx.m_scaleY !== null && self._canvasEx.m_scaleY != 0)
+    {
+      offsetY = offsetY / self._canvasEx.m_scaleY;
+    }
 
     self._lastPosPointerX = offsetX; 
     self._lastPosPointerY = offsetY;
-
 
     return( 
     {
@@ -684,12 +762,18 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
 
   CanvasControl.prototype.setFocus = function(_focusIn) 
   {
-      if (this._hiddenInput != null)
+      if (this._hiddenInput !== null)
       {
-        if (_focusIn == true)
+        this._hasFocus = _focusIn;
+
+        if (_focusIn === true)
+        {
           this._hiddenInput.focus();
+        }
         else
+        {
           this._hiddenInput.blur();
+        }
       }
   };
 
@@ -754,7 +838,6 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
 
   CanvasControl.prototype.setImage = function(_imageName) 
   {
-
     if (this._controlType == this.C_CONTROL_TYPE_BUTTON ||
      this._controlType == this.C_CONTROL_TYPE_CHECKBOX)
     {
@@ -770,14 +853,77 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
 
   };
 
-  CanvasControl.prototype.drawImageResized = function(self) 
+  CanvasControl.prototype.setImageDown = function(_imageName) 
+  {
+    if (this._controlType == this.C_CONTROL_TYPE_BUTTON ||
+     this._controlType == this.C_CONTROL_TYPE_CHECKBOX)
+    {
+      var self = this;
+
+      this._imageDown = new Image();
+      this._imageDown.src = _imageName;
+      this._imageDown.onload = function()
+      {
+        self._imageDownLoaded = true;
+      }
+    }
+
+  };
+
+  CanvasControl.prototype.setX = function(_posX) 
+  {
+    this._x = _posX;
+  };
+
+  CanvasControl.prototype.setY = function(_posY)
+  {
+    this._y = _posY;
+  };
+
+  CanvasControl.prototype.setScale = function(_scale)
+  {
+    this._scale = _scale;
+
+    this._width = this._recWidth * this._scale;
+    this._height = this._recHeight * this._scale;
+
+    //self.render();
+  };
+
+  CanvasControl.prototype.setAlpha = function(_alpha)
+  {
+    this._alpha = _alpha;
+  };
+
+  CanvasControl.prototype.getWidth = function()
+  {
+    return this._width;
+  };
+
+  CanvasControl.prototype.getHeight = function()
+  {
+    return this._height;
+  };
+
+  CanvasControl.prototype.registerOnClick = function(_parent, _callback)
+  {
+    this._onClickParent = _parent;
+    this._onClick = _callback;
+  };
+
+  CanvasControl.prototype.getOnClickParent = function()
+  {
+      return this._onClickParent;
+  };
+
+  CanvasControl.prototype.drawImageResized = function(_image, self) 
   {
    var sw = self._width - 4;
    var sh = self._height - 4;
    var sx = self._x;
    var sy = self._y;
-   var w = self._image.width;
-   var h = self._image.height;
+   var w = _image.width;
+   var h = _image.height;
    var scale = 1.0;
 
       // Get image scale factor. Fit image to lowest measure.
@@ -798,7 +944,7 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
        w = w * scale;
        h = h * scale;
      }
-   }
+      }
 
       // Recalculate width and height adding 2 pixels of margin.
       var dx = 0;
@@ -811,7 +957,27 @@ CanvasControl.prototype.initKeyboardEvents = function (self)
       sx = sx + dx + 2;
       sy = sy + dy + 2;
 
-      self._ctx.drawImage(self._image,  0, 0, self._image.width, self._image.height, sx, sy, w, h);
+      self._ctx.drawImage(_image,  0, 0, _image.width, _image.height, sx, sy, w, h);
     };
+
+    CanvasControl.prototype.rgbaToColor = function(_r, _g, _b, _a) 
+    {
+        _r = _r % 256;
+        _g = _g % 256;
+        _b = _b % 256;
+        var result = 'rgba(' + _r.toString() + "," + _g.toString() + "," + _b.toString() + "," + _a.toString()+")";
+        return result;
+    }
+
+    CanvasControl.prototype.registerOnKeyUpListener = function(_parent, _callback) 
+    {
+      this._onkeyUpParent = _parent;
+      this._onkeyup = _callback;
+    }
+
+    CanvasControl.prototype.getOnKeyUpParent = function() 
+    {
+      return this._onkeyUpParent;
+    }
 }
 

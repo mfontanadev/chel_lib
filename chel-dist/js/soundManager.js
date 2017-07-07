@@ -99,9 +99,9 @@ function SoundManager()
 
 		var loadedResourceCount = 0;
 		
-		var arr = (typeof arr != "object") ? [arr] : arr;
-	
-		if (arr.length === 0 || _owner.m_managerAvailable === false)
+		SoundManager.self.m_items = (typeof arr != "object") ? [arr] : arr;
+
+		if (SoundManager.self.m_items.length === 0 || _owner.m_managerAvailable === false)
 		{
 			_owner.m_managerAvailable = false;
 			exitLoading();
@@ -112,16 +112,16 @@ function SoundManager()
 			{
 				loadedResourceCount++;
 
-				if (arr.length > 0)
+				if (SoundManager.self.m_items.length > 0)
 				{
-					var percent = (Math.floor((loadedResourceCount / arr.length) * 100));
+					var percent = (Math.floor((loadedResourceCount / SoundManager.self.m_items.length) * 100));
 					if ( (typeof _owner.m_idProgressBar !== 'undefined') && (_owner.m_idProgressBar !== null) )
 	                {
 	                    chUpadeInfoControlTextCanvas(_owner.m_idProgressBar, "Loading sounds: " + percent + "%");
 	                }
 				}
 				
-				if (loadedResourceCount === arr.length)
+				if (loadedResourceCount === SoundManager.self.m_items.length)
 				{
 					msglog('SoundManager END LOADING');
 					exitLoading();
@@ -136,7 +136,7 @@ function SoundManager()
 			{
 				createjs.Sound.alternateExtensions = ["mp3"];	// add other extensions to try loading if the src file extension is not supported
 				createjs.Sound.addEventListener("fileload", onLoad);
-				createjs.Sound.registerSounds(arr);
+				createjs.Sound.registerSounds(SoundManager.self.m_items);
 			}
 			catch (e)
 			{
@@ -184,22 +184,21 @@ function SoundManager()
 		{
 			if (_wholeWord === true)
 			{
-				for (var i = 0; i < this.m_soundList.length; i++) 
+				for (var i = 0; i < this.m_items.length; i++) 
 				{
-					if ( this.m_soundList[i].src === _name)
-						result = this.m_soundList[i].id;
+					if ( this.m_items[i].src === _name)
+						result = this.m_items[i].id;
 				}
 			}
 			else
 			{
-				for (var i = 0; i < this.m_soundList.length; i++) 
+				for (var i = 0; i < this.m_items.length; i++) 
 				{
-					if ( this.m_soundList[i].src.indexOf(_name) != -1)
-						result = this.m_soundList[i].id;
+					if ( this.m_items[i].src.indexOf(_name) != -1)
+						result = this.m_items[i].id;
 				}
 			}
 		}
-		
 		return result;
 	}
 
@@ -227,7 +226,7 @@ function SoundManager()
 
 
 	// Trick to apple devices. Play a muted sound after user clic to enable sounds.
-	SoundManager.prototype.initFirstSound = function(_id) 
+	SoundManager.prototype.initFirstSound = function() 
 	{
 		if (this.m_firstInit === false)
 		{
@@ -236,17 +235,25 @@ function SoundManager()
 		}
 	};
 
-	SoundManager.prototype.playSoundTest = function(_id) 
+	SoundManager.prototype.playSoundTest = function() 
 	{
 		this.play(-2);
 	};
 
-	SoundManager.prototype.play = function(_id) 
+	SoundManager.prototype.play = function(_id, _infitineLoop) 
 	{
 		if (this.m_managerAvailable === true)
 		{
+			var loop = 0;
+			if (_infitineLoop === true)
+			{
+				loop = -1;
+			}
+			
 			//Play the sound: play (src, interrupt, delay, offset, loop, volume, pan)
-            var instance = createjs.Sound.play(_id, createjs.Sound.INTERRUPT_ANY, 0, 0, false, 1);
+			var instance = createjs.Sound.play(_id, createjs.Sound.INTERRUPT_ANY, 0, 0, false, 1);
+
+            //var instance = createjs.Sound.play(_id, createjs.Sound.INTERRUPT_ANY, 0, 0, loop, 1, 1);
 
             if (instance == null || instance.playState == createjs.Sound.PLAY_FAILED) 
 			{
@@ -262,7 +269,13 @@ function SoundManager()
 			return instance;
 		}
 	};
-	
+
+	SoundManager.prototype.playSoundByName = function(_name) 
+	{
+		var soundId = this.getIdByName(_name);
+		this.play(soundId);
+	}
+
 	SoundManager.prototype.stop = function(_id) 
 	{
 		if (this.m_managerAvailable === true)
@@ -270,6 +283,12 @@ function SoundManager()
 			createjs.Sound.stop(_id);
 		}
 	};
+
+	SoundManager.prototype.stopSoundByName = function(_name) 
+	{
+		var soundId = this.getIdByName(_name);
+		this.stop(soundId);
+	}
 
 	this.initDefault();
 	this.initializaSoundPlugin();

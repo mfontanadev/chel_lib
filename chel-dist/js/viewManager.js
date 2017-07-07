@@ -1,4 +1,7 @@
 ViewManager.self = null;
+
+
+
 function ViewManager(_document, _window) 
 { 
 	ViewManager.self = this;
@@ -30,10 +33,16 @@ function ViewManager(_document, _window)
 	// Group global data.
 	this.m_dataContext = null;
 
-	this.m_counterCycles = 0;
 	this.m_counterFPS = 0;
+	this.m_messageByTick = ""; 
+	this.m_messageByCycle = "";
 
 	this.redefinitionOfRequestAnimFrame();
+
+	// Avoid zooming on SAfari 10.x (initial-scale=1.0 is not working any more)
+	_document.addEventListener('gesturestart', function (e) {
+	    e.preventDefault();
+	});
 }
 
 // Redefinition of window.requestAnimFrame to apply fallback with setTimeout;
@@ -186,7 +195,7 @@ ViewManager.prototype.enableProgressBarWhenLoadingResources = function ()
 	var infoControlHeight = 30;
 
    	this.m_lblInfoControl = new CanvasControl();
-	this.m_lblInfoControl.initLabelStyle(this.m_canvasEx.m_canvas, getCenter(this.m_canvasEx.m_canvas.width, infoControlWidth), getCenter(this.m_canvasEx.m_canvas.height, infoControlHeight), infoControlWidth, infoControlHeight, "");
+	this.m_lblInfoControl.initLabelStyle(this.m_canvasEx, getCenter(this.m_canvasEx.m_canvas.width, infoControlWidth), getCenter(this.m_canvasEx.m_canvas.height, infoControlHeight), infoControlWidth, infoControlHeight, "");
 	this.m_lblInfoControl._fontSize = 12;
 	this.m_lblInfoControl.setTheme(CanvasControl.C_THEME_TYPE_GREEN);
 	this.m_lblInfoControl._visible = true;
@@ -199,12 +208,17 @@ ViewManager.prototype.getProgressBar = function ()
 	return this.m_lblInfoControl;
 };
 
-ViewManager.prototype.initCanvasById = function (_canvasId)
+ViewManager.prototype.initCanvasById = function (_canvasId, _maxZoom)
 {
 	this.m_canvasEx = new chCanvas(this.m_document, this.m_window);
 
 	this.m_canvasEx.setCanvasById(_canvasId);
-	this.m_canvasEx.setResizeMethodToMaxZoom();
+
+	if (_maxZoom === true)
+	{
+			this.m_canvasEx.setResizeMethodToMaxZoom();
+	}
+	
 	this.m_canvasEx.enableOnResizeChange();
 	this.m_canvasEx.performResize();
 };
@@ -217,7 +231,7 @@ ViewManager.prototype.initializeMouseManager = function ()
 
 	try
 	{
-		this.m_mouseManager.initWithCanvasAndSound(this.m_canvasEx.m_canvas, this.m_soundManager);
+		this.m_mouseManager.initWithCanvasAndSound(this.m_canvasEx, this.m_soundManager);
 	}
 	catch (e)
 	{
@@ -315,7 +329,7 @@ ViewManager.prototype.getActivityByID = function (_id)
 	{
 		for (var i = this.m_activities.length - 1; i >= 0; i--) 
 		{
-			console.log(this.m_activities[i]);
+			//console.log(this.m_activities[i]);
 			if (this.m_activities[i].m_id === _id)
 			{
 				result = this.m_activities[i];
@@ -350,7 +364,10 @@ ViewManager.prototype.navigateTo = function (_id)
 	this.setCurrentActivityByID(_id);
 
 	if (this.isCurrentActivityValid() === true)
+	{
+		console.log("ENTER TO: " + this.getCurrentActivity().getActivityName());
 		this.getCurrentActivity().onEnterActivity();
+	}
 };
 
 
@@ -370,7 +387,8 @@ ViewManager.prototype.initializeActivities = function ()
 
 ViewManager.prototype.animationCycle = function ()
 {
-	this.m_counterCycles++;
+	var elapsedTime = (this.m_currentDate - this.m_startTime);
+	var timerFrec = (Date.now() - this.m_currentDate);
 
 	// updates
 	if (this.updateTimer() === true)
@@ -385,17 +403,20 @@ ViewManager.prototype.animationCycle = function ()
 
 		// render
 		this.render();
+
+		this.m_messageByCycle = "FPS=" + Math.round(1000 / elapsedTime, 2) + ", Cycle (ms)=" + Math.round(elapsedTime, 2);
 	}
 
-	var message = '' + this.m_counterCycles;
-	message += ' FPS=' + this.m_counterFPS;
-	message += ' RATIO=' + Math.round((this.m_counterCycles / this.m_counterFPS), 0);
-
 	// log
-	//if (C_LOG === true)
+	if (C_LOG === true)
 	{
-		//message += 'Mouse position: ' + m_mouseManager.m_mousePosX + ',' + m_mouseManager.m_mousePosY + "," +  m_mouseManager.m_mouseClick + ", fps=" + Math.round(m_elapsedTime,2);
-		//writeMessageXY(this.m_canvasEx.m_context, message, 60, 40, C_DEBUG_MODE);
+		this.m_messageByTick = "Timer (ms)=" + Math.round(timerFrec, 2) + ", ";
+		this.m_messageByTick += 'MP=' + Math.round(this.m_mouseManager.m_mousePosX,0) + ',' + Math.round(this.m_mouseManager.m_mousePosY, 0) + "," + this.m_mouseManager.m_mouseClick;
+		writeMessageXY(this.m_canvasEx.m_context, this.m_messageByTick, 10, 10, C_DEBUG_MODE);
+
+		writeMessageXY(this.m_canvasEx.m_context, this.m_messageByCycle, 200, 10, C_DEBUG_MODE);
+
+		writeMessageXY(this.m_canvasEx.m_context, this.m_mouseManager.m_externalLogString, 350, 10, C_DEBUG_MODE);
 	}
 
 	// Request new animation cycle.
